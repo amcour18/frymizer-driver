@@ -288,29 +288,33 @@ function showScreen(id) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SETUP (first-time config)
+   CONFIG + DATA
    ═══════════════════════════════════════════════════════════════ */
 const GITHUB_RAW = 'https://raw.githubusercontent.com/amcour18/frymizer-driver/main/data';
 
-function saveSetup() {
-  const plant = $('setupPlantId').value.trim();
-  const key = $('setupMapsKey').value.trim();
-  if (!plant) { toast('Enter the Plant ID', 'error'); return; }
-  localStorage.setItem('frymizer_driver_plant', plant);
-  if (key) localStorage.setItem('frymizer_driver_maps_key', key);
-  APP.plantId = plant;
-  APP.mapsKey = key;
-  loadLoginScreen();
-}
-
-function loadConfig() {
-  APP.plantId = localStorage.getItem('frymizer_driver_plant') || '';
-  APP.mapsKey = localStorage.getItem('frymizer_driver_maps_key') || '';
-  return !!APP.plantId;
-}
-
 function dataUrl(path) {
   return GITHUB_RAW + '/' + path + '?t=' + Date.now();
+}
+
+async function loadAppConfig() {
+  try {
+    const resp = await fetch(dataUrl('config.json'));
+    if (!resp.ok) throw new Error('No config');
+    const config = await resp.json();
+    APP.mapsKey = config.mapsKey || '';
+    APP.allUsers = config.users || [];
+    APP.plants = config.plants || [];
+    // Load Google Maps if we have a key
+    if (APP.mapsKey && !window.google) {
+      const s = document.createElement('script');
+      s.src = 'https://maps.googleapis.com/maps/api/js?key=' + APP.mapsKey + '&libraries=geometry';
+      s.async = true; s.defer = true;
+      document.head.appendChild(s);
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -318,17 +322,20 @@ function dataUrl(path) {
    ═══════════════════════════════════════════════════════════════ */
 async function loadLoginScreen() {
   showScreen('loginScreen');
-  $('loginPlant').textContent = 'Plant ' + APP.plantId;
-  try {
-    const resp = await fetch(dataUrl(APP.plantId + '/users.json'));
-    if (!resp.ok) throw new Error('No users');
-    APP.users = await resp.json();
-    $('loginUser').innerHTML = APP.users.map(u => '<option value="' + escHtml(u.name) + '">' + escHtml(u.name) + '</option>').join('');
-  } catch (e) {
-    toast('Cannot reach server — check API URL', 'error');
-    APP.users = [];
-    $('loginUser').innerHTML = '<option>No users loaded</option>';
+  $('loginPlant').textContent = '';
+
+  if (!APP.allUsers || !APP.allUsers.length) {
+    const ok = await loadAppConfig();
+    if (!ok || !APP.allUsers.length) {
+      toast('No routes pushed yet — ask your scheduler', 'error');
+      $('loginUser').innerHTML = '<option>No users loaded</option>';
+      return;
+    }
   }
+
+  // Show all users — filter to drivers/managers only (not admin-only accounts)
+  APP.users = APP.allUsers;
+  $('loginUser').innerHTML = APP.users.map(u => '<option value="' + escHtml(u.name) + '">' + escHtml(u.name) + (u.plantId ? ' (Plant ' + escHtml(u.plantId) + ')' : '') + '</option>').join('');
 }
 
 function login() {
@@ -342,6 +349,7 @@ function login() {
     return;
   }
   APP.currentUser = user;
+  APP.plantId = user.plantId || '';
   $('loginError').textContent = '';
   $('loginPin').value = '';
   loadRouteList();
@@ -797,30 +805,13 @@ document.addEventListener('DOMContentLoaded', () => {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
-  // Load config or show setup
-  if (loadConfig()) {
-    loadLoginScreen();
-  } else {
-    showScreen('setupScreen');
-  }
+  // Go straight to login — config loads from GitHub
+  loadLoginScreen();
 
   // Listen for Enter on PIN field
   $('loginPin').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
 });
 </script>
 
-<!-- Google Maps — loaded dynamically based on stored key -->
-<script>
-(function() {
-  const key = localStorage.getItem('frymizer_driver_maps_key');
-  if (key) {
-    const s = document.createElement('script');
-    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&libraries=geometry';
-    s.async = true;
-    s.defer = true;
-    document.head.appendChild(s);
-  }
-})();
-</script>
 </body>
 </html>
