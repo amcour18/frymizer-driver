@@ -1,0 +1,114 @@
+[
+  {
+    "name": "Admin",
+    "pin": "1234",
+    "role": "admin",
+    "routes": [],
+    "address": "1331 N 94TH CT (7103)",
+    "lat": 41.2680638,
+    "lng": -96.0599831
+  },
+  {
+    "name": "Jack",
+    "pin": "4600",
+    "role": "admin",
+    "routes": [],
+    "address": "2720 Fairforest Clevedale Rd. Spartanburg, SC 29301",
+    "lat": 34.95163,
+    "lng": -82.0214684
+  },
+  {
+    "name": "Tom",
+    "pin": "3170",
+    "role": "manager",
+    "routes": [],
+    "address": "",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "name": "Sonny",
+    "pin": "2720",
+    "role": "manager",
+    "routes": [],
+    "address": "",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "name": "Blake",
+    "pin": "2110",
+    "role": "manager",
+    "routes": [],
+    "address": "",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "name": "Kyel",
+    "pin": "1234",
+    "role": "manager",
+    "routes": [],
+    "address": "",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "name": "Kristin",
+    "pin": "4192",
+    "role": "admin",
+    "routes": [],
+    "address": "",
+    "lat": null,
+    "lng": null
+  },
+  {
+    "name": "Truck25",
+    "pin": "2525",
+    "role": "manager",
+    "routes": [
+      "Charlotte",
+      "Charlotte",
+      "Salisbury",
+      "Chesnee",
+      "Charlotte",
+      "Rhodhiss",
+      "Greer"
+    ],
+    "address": "2720 Fairforest Clevedale Rd., Spartanburg, SC 29301",
+    "lat": 34.95163,
+    "lng": -82.0214684
+  },
+  {
+    "name": "Truck26",
+    "pin": "2626",
+    "role": "manager",
+    "routes": [
+      "Asheville",
+      "Charlotte",
+      "Charlotte",
+      "Rhodhiss",
+      "Greer",
+      "Charlotte",
+      "Salisbury",
+      "Chesnee",
+      "Charlotte",
+      "Monroe",
+      "Gastonia"
+    ],
+    "address": "2720 Fairforest Clevedale Rd. Spartanburg, SC 29301",
+    "lat": 34.95163,
+    "lng": -82.0214684
+  },
+  {
+    "name": "Truck27",
+    "pin": "2727",
+    "role": "manager",
+    "routes": [
+      "Peanut"
+    ],
+    "address": "2720 Fairforest Clevedale Rd., Spartanburg, SC 29301",
+    "lat": 34.95163,
+    "lng": -82.0214684
+  }
+]
