@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#FFD100">
+<link rel="manifest" href="manifest.json">
+<title>Fry Mizer Driver</title>
+<style>
+/* ── RESET + VARS ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #FFD100; --gold-dark: #C9A400; --gold-bg: #FFF8D6; --gold-hover: #E6BC00;
+  --black: #111; --black-light: #1a1a1a; --white: #fff; --bg: #f5f5f0;
+  --green: #22c55e; --red: #ef4444; --text: #1a1a1a; --text-light: #666;
+  --radius: 14px; --shadow: 0 2px 12px rgba(0,0,0,.08);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+button { cursor: pointer; border: none; font-family: inherit; }
+input, select { font-family: inherit; }
+
+/* ── SCREENS ── */
+.screen { position: fixed; inset: 0; display: none; flex-direction: column; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* ── SETUP SCREEN ── */
+.setup-screen { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 40%, #111 100%); align-items: center; justify-content: center; padding: 20px; }
+.setup-card { background: var(--white); border-radius: 20px; padding: 40px 32px; width: 100%; max-width: 400px; box-shadow: 0 25px 80px rgba(0,0,0,.3); text-align: center; }
+.setup-card h1 { font-size: 1.3rem; margin-bottom: 4px; }
+.setup-card p { font-size: .85rem; color: var(--text-light); margin-bottom: 20px; }
+.setup-card input { width: 100%; padding: 12px 16px; border: 2px solid rgba(0,0,0,.08); border-radius: 10px; font-size: .95rem; margin-bottom: 12px; }
+.setup-card input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,209,0,.25); }
+.setup-card .btn { width: 100%; }
+
+/* ── LOGIN SCREEN ── */
+.login-screen { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 40%, #111 100%); align-items: center; justify-content: center; padding: 20px; position: relative; }
+.login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 600px 400px at 30% 20%, rgba(255,209,0,.08) 0%, transparent 70%); pointer-events: none; }
+.login-card { background: var(--white); border-radius: 20px; padding: 40px 32px; width: 100%; max-width: 400px; box-shadow: 0 25px 80px rgba(0,0,0,.3); text-align: center; position: relative; z-index: 1; }
+.login-logo { width: 64px; height: 64px; background: var(--black); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 1.8rem; box-shadow: 0 4px 20px rgba(0,0,0,.3), 0 0 0 2px var(--gold); }
+.login-card h1 { font-size: 1.3rem; margin-bottom: 4px; }
+.login-card .subtitle { font-size: .85rem; color: var(--text-light); margin-bottom: 24px; }
+.login-field { margin-bottom: 14px; text-align: left; }
+.login-field label { display: block; font-size: .78rem; font-weight: 600; margin-bottom: 4px; color: var(--text-light); text-transform: uppercase; letter-spacing: .5px; }
+.login-field select, .login-field input { width: 100%; padding: 12px 16px; border: 2px solid rgba(0,0,0,.08); border-radius: 10px; font-size: 1rem; background: var(--white); }
+.login-field select:focus, .login-field input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,209,0,.25); }
+.login-error { color: var(--red); font-size: .82rem; min-height: 20px; margin-bottom: 8px; }
+.login-plant { font-size: .72rem; color: var(--text-light); margin-top: 16px; }
+
+/* ── BUTTONS ── */
+.btn { padding: 12px 24px; border-radius: 10px; font-size: .92rem; font-weight: 700; transition: all .2s; }
+.btn-gold { background: var(--gold); color: var(--black); }
+.btn-gold:hover { background: var(--gold-hover); box-shadow: 0 4px 16px rgba(255,209,0,.4); }
+.btn-outline { background: transparent; border: 2px solid rgba(0,0,0,.1); color: var(--text); }
+.btn-outline:hover { border-color: var(--gold); color: var(--gold-dark); }
+.btn-green { background: var(--green); color: var(--white); }
+.btn-green:hover { background: #16a34a; }
+.btn-red { background: var(--red); color: var(--white); }
+.btn-sm { padding: 8px 16px; font-size: .82rem; }
+.btn-block { width: 100%; }
+
+/* ── ROUTE LIST SCREEN ── */
+.routes-screen { background: var(--bg); }
+.routes-header { background: linear-gradient(135deg, #0d0d0d, var(--black-light)); color: var(--white); padding: calc(var(--safe-top) + 14px) 20px 14px; display: flex; align-items: center; justify-content: space-between; }
+.routes-header .brand { font-size: 1.1rem; font-weight: 700; color: var(--gold); display: flex; align-items: center; gap: 8px; }
+.routes-header .user-info { font-size: .82rem; opacity: .8; }
+.routes-body { flex: 1; overflow-y: auto; padding: 16px 20px calc(var(--safe-bottom) + 16px); }
+.routes-greeting { font-size: 1.1rem; font-weight: 600; margin-bottom: 16px; }
+.route-card { background: var(--white); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 12px; box-shadow: var(--shadow); border: 1px solid rgba(0,0,0,.05); display: flex; align-items: center; justify-content: space-between; transition: all .2s; }
+.route-card:active { transform: scale(.98); }
+.route-card-left { flex: 1; }
+.route-card-name { font-size: 1rem; font-weight: 700; margin-bottom: 2px; }
+.route-card-day { font-size: .85rem; color: var(--text-light); }
+.route-card-meta { font-size: .78rem; color: var(--text-light); margin-top: 4px; }
+.route-card-badge { background: var(--gold-bg); color: var(--gold-dark); font-size: .75rem; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+.route-card-badge.done { background: #dcfce7; color: #16a34a; }
+.no-routes { text-align: center; padding: 60px 20px; color: var(--text-light); }
+.no-routes .icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* ── ACTIVE ROUTE SCREEN ── */
+.active-screen { background: var(--bg); }
+.active-header { background: linear-gradient(135deg, #0d0d0d, var(--black-light)); color: var(--white); padding: calc(var(--safe-top) + 10px) 16px 10px; display: flex; align-items: center; gap: 12px; }
+.active-header .back-btn { background: none; color: var(--gold); font-size: 1.2rem; padding: 4px 8px; }
+.active-header-info { flex: 1; }
+.active-header-title { font-size: .95rem; font-weight: 700; }
+.active-header-progress { font-size: .78rem; opacity: .8; }
+.progress-bar { height: 3px; background: rgba(255,255,255,.15); margin-top: 4px; border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--gold); transition: width .4s ease; }
+
+/* Map container */
+#routeMap { width: 100%; height: 260px; background: #e0e0e0; flex-shrink: 0; }
+
+/* Current stop card */
+.active-body { flex: 1; overflow-y: auto; padding: 0 0 calc(var(--safe-bottom) + 16px); }
+.current-stop { background: var(--white); margin: 12px 16px; border-radius: var(--radius); padding: 18px 20px; box-shadow: 0 4px 20px rgba(0,0,0,.1); border-left: 4px solid var(--gold); }
+.current-stop-label { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--gold-dark); margin-bottom: 6px; }
+.current-stop-name { font-size: 1.15rem; font-weight: 800; margin-bottom: 2px; }
+.current-stop-addr { font-size: .85rem; color: var(--text-light); margin-bottom: 8px; }
+.current-stop-details { display: flex; gap: 16px; font-size: .78rem; color: var(--text-light); margin-bottom: 14px; flex-wrap: wrap; }
+.current-stop-details span { display: flex; align-items: center; gap: 4px; }
+.current-stop-actions { display: flex; gap: 10px; }
+.current-stop-actions .btn { flex: 1; text-align: center; }
+
+/* Stop list */
+.stop-list { padding: 0 16px; }
+.stop-list-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: var(--text-light); margin: 16px 0 8px; }
+.stop-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--white); border-radius: 10px; margin-bottom: 6px; box-shadow: 0 1px 4px rgba(0,0,0,.04); transition: all .2s; }
+.stop-item.done { opacity: .5; }
+.stop-item.current { border: 2px solid var(--gold); box-shadow: 0 2px 12px rgba(255,209,0,.2); }
+.stop-num { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); color: var(--black); font-size: .78rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.stop-item.done .stop-num { background: var(--green); color: var(--white); }
+.stop-info { flex: 1; min-width: 0; }
+.stop-info-name { font-size: .88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stop-info-addr { font-size: .75rem; color: var(--text-light); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stop-check { font-size: 1.2rem; }
+
+/* ── TURN-BY-TURN SCREEN ── */
+.tbt-screen { background: var(--bg); }
+.tbt-header-bar { background: linear-gradient(135deg, #0d0d0d, var(--black-light)); color: var(--white); padding: calc(var(--safe-top) + 10px) 16px 10px; display: flex; align-items: center; gap: 12px; }
+.tbt-dest { flex: 1; }
+.tbt-dest-name { font-size: .95rem; font-weight: 700; }
+.tbt-dest-meta { font-size: .78rem; opacity: .8; }
+.tbt-body { flex: 1; overflow-y: auto; padding: 0 0 calc(var(--safe-bottom) + 80px); }
+.tbt-step { padding: 14px 20px; border-bottom: 1px solid rgba(0,0,0,.06); display: flex; gap: 12px; align-items: flex-start; }
+.tbt-step-icon { width: 32px; height: 32px; border-radius: 50%; background: var(--gold-bg); color: var(--gold-dark); display: flex; align-items: center; justify-content: center; font-size: .85rem; font-weight: 700; flex-shrink: 0; }
+.tbt-step-text { flex: 1; }
+.tbt-step-instruction { font-size: .88rem; line-height: 1.4; }
+.tbt-step-dist { font-size: .75rem; color: var(--text-light); margin-top: 2px; }
+.tbt-footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px calc(var(--safe-bottom) + 12px); background: var(--white); box-shadow: 0 -4px 20px rgba(0,0,0,.1); display: flex; gap: 10px; }
+.tbt-footer .btn { flex: 1; text-align: center; }
+
+/* ── COMPLETE SCREEN ── */
+.complete-screen { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%); align-items: center; justify-content: center; padding: 20px; }
+.complete-card { background: var(--white); border-radius: 20px; padding: 48px 32px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,.3); }
+.complete-icon { font-size: 4rem; margin-bottom: 16px; }
+.complete-card h2 { font-size: 1.5rem; margin-bottom: 20px; }
+.complete-stat { font-size: .92rem; color: var(--text-light); margin-bottom: 8px; }
+.complete-stat strong { color: var(--text); }
+
+/* ── TOAST ── */
+.toast-container { position: fixed; top: calc(var(--safe-top) + 12px); left: 50%; transform: translateX(-50%); z-index: 9999; }
+.toast { padding: 10px 20px; border-radius: 10px; font-size: .85rem; font-weight: 600; color: var(--white); opacity: 0; transform: translateY(-10px); transition: all .3s; pointer-events: none; margin-bottom: 6px; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+.toast.info { background: #333; }
+
+/* ── OFFLINE BADGE ── */
+.offline-badge { position: fixed; bottom: calc(var(--safe-bottom) + 8px); left: 50%; transform: translateX(-50%); background: var(--red); color: var(--white); padding: 6px 16px; border-radius: 20px; font-size: .75rem; font-weight: 700; z-index: 9000; display: none; }
+.offline-badge.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- OFFLINE BADGE -->
+<div class="offline-badge" id="offlineBadge">Offline — changes will sync when back online</div>
+
+<!-- SCREEN 0: SETUP (first-time config) -->
+<div class="screen setup-screen active" id="setupScreen">
+  <div class="setup-card">
+    <div style="font-size:2.5rem;margin-bottom:12px">🔥</div>
+    <h1>Fry Mizer Driver</h1>
+    <p>First-time setup — enter your plant info</p>
+    <input type="text" id="setupPlantId" placeholder="Plant ID (e.g. 15)">
+    <input type="text" id="setupMapsKey" placeholder="Google Maps API Key (optional)">
+    <button class="btn btn-gold btn-block" onclick="saveSetup()">Continue</button>
+  </div>
+</div>
+
+<!-- SCREEN 1: LOGIN -->
+<div class="screen login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🔥</div>
+    <h1>Fry Mizer Driver</h1>
+    <div class="subtitle">Sign in to view your routes</div>
+    <div class="login-field">
+      <label>Name</label>
+      <select id="loginUser"></select>
+    </div>
+    <div class="login-field">
+      <label>PIN</label>
+      <input type="password" id="loginPin" maxlength="6" inputmode="numeric" placeholder="Enter PIN">
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <button class="btn btn-gold btn-block" onclick="login()">Sign In</button>
+    <div class="login-plant" id="loginPlant"></div>
+  </div>
+</div>
+
+<!-- SCREEN 2: ROUTE LIST -->
+<div class="screen routes-screen" id="routesScreen">
+  <div class="routes-header">
+    <div class="brand"><span>🔥</span> Fry Mizer Driver</div>
+    <div>
+      <span class="user-info" id="routesUser"></span>
+      <button class="btn btn-sm btn-outline" style="color:var(--gold);border-color:rgba(255,209,0,.3);margin-left:8px" onclick="logoutDriver()">Sign Out</button>
+    </div>
+  </div>
+  <div class="routes-body" id="routesBody">
+    <div class="routes-greeting" id="routesGreeting"></div>
+    <div id="routeCards"></div>
+  </div>
+</div>
+
+<!-- SCREEN 3: ACTIVE ROUTE -->
+<div class="screen active-screen" id="activeScreen">
+  <div class="active-header">
+    <button class="back-btn" onclick="backToRoutes()">&#9664;</button>
+    <div class="active-header-info">
+      <div class="active-header-title" id="activeTitle"></div>
+      <div class="active-header-progress" id="activeProgress"></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </div>
+  <div id="routeMap"></div>
+  <div class="active-body" id="activeBody"></div>
+</div>
+
+<!-- SCREEN 4: TURN-BY-TURN -->
+<div class="screen tbt-screen" id="tbtScreen">
+  <div class="tbt-header-bar">
+    <button class="back-btn" onclick="showActiveRoute()" style="background:none;color:var(--gold);font-size:1.2rem;padding:4px 8px">&#9664;</button>
+    <div class="tbt-dest">
+      <div class="tbt-dest-name" id="tbtName"></div>
+      <div class="tbt-dest-meta" id="tbtMeta"></div>
+    </div>
+  </div>
+  <div id="tbtMap" style="width:100%;height:240px;background:#e0e0e0;flex-shrink:0"></div>
+  <div class="tbt-body" id="tbtBody"></div>
+  <div class="tbt-footer">
+    <button class="btn btn-outline" onclick="showActiveRoute()">&#9664; Back</button>
+    <button class="btn btn-green" id="tbtDoneBtn" onclick="">&#10003; Done</button>
+  </div>
+</div>
+
+<!-- SCREEN 5: ROUTE COMPLETE -->
+<div class="screen complete-screen" id="completeScreen">
+  <div class="complete-card" id="completeContent"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   APP STATE
+   ═══════════════════════════════════════════════════════════════ */
+const APP = {
+  apiUrl: '',
+  plantId: '',
+  mapsKey: '',
+  currentUser: null,
+  users: [],
+  routes: [],
+  currentRoute: null,
+  currentStopIndex: 0,
+  map: null,
+  markers: [],
+  directionsRenderer: null,
+  cachedDirections: [],
+};
+
+function $(id) { return document.getElementById(id); }
+function escHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TOAST
+   ═══════════════════════════════════════════════════════════════ */
+function toast(msg, type) {
+  type = type || 'info';
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  $('toastContainer').appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCREEN MANAGEMENT
+   ═══════════════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SETUP (first-time config)
+   ═══════════════════════════════════════════════════════════════ */
+const GITHUB_RAW = 'https://raw.githubusercontent.com/amcour18/frymizer-driver/main/data';
+
+function saveSetup() {
+  const plant = $('setupPlantId').value.trim();
+  const key = $('setupMapsKey').value.trim();
+  if (!plant) { toast('Enter the Plant ID', 'error'); return; }
+  localStorage.setItem('frymizer_driver_plant', plant);
+  if (key) localStorage.setItem('frymizer_driver_maps_key', key);
+  APP.plantId = plant;
+  APP.mapsKey = key;
+  loadLoginScreen();
+}
+
+function loadConfig() {
+  APP.plantId = localStorage.getItem('frymizer_driver_plant') || '';
+  APP.mapsKey = localStorage.getItem('frymizer_driver_maps_key') || '';
+  return !!APP.plantId;
+}
+
+function dataUrl(path) {
+  return GITHUB_RAW + '/' + path + '?t=' + Date.now();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOGIN
+   ═══════════════════════════════════════════════════════════════ */
+async function loadLoginScreen() {
+  showScreen('loginScreen');
+  $('loginPlant').textContent = 'Plant ' + APP.plantId;
+  try {
+    const resp = await fetch(dataUrl(APP.plantId + '/users.json'));
+    if (!resp.ok) throw new Error('No users');
+    APP.users = await resp.json();
+    $('loginUser').innerHTML = APP.users.map(u => '<option value="' + escHtml(u.name) + '">' + escHtml(u.name) + '</option>').join('');
+  } catch (e) {
+    toast('Cannot reach server — check API URL', 'error');
+    APP.users = [];
+    $('loginUser').innerHTML = '<option>No users loaded</option>';
+  }
+}
+
+function login() {
+  const name = $('loginUser').value;
+  const pin = $('loginPin').value;
+  const user = APP.users.find(u => u.name === name && u.pin === pin);
+  if (!user) {
+    $('loginError').textContent = 'Invalid PIN.';
+    $('loginPin').value = '';
+    $('loginPin').focus();
+    return;
+  }
+  APP.currentUser = user;
+  $('loginError').textContent = '';
+  $('loginPin').value = '';
+  loadRouteList();
+}
+
+function logoutDriver() {
+  APP.currentUser = null;
+  APP.currentRoute = null;
+  showScreen('loginScreen');
+  $('loginPin').value = '';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROUTE LIST
+   ═══════════════════════════════════════════════════════════════ */
+async function loadRouteList() {
+  showScreen('routesScreen');
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  $('routesGreeting').textContent = greeting + ', ' + APP.currentUser.name;
+  $('routesUser').textContent = APP.currentUser.name;
+  $('routeCards').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-light)">Loading routes...</div>';
+
+  try {
+    const resp = await fetch(dataUrl(APP.plantId + '/routes.json'));
+    if (!resp.ok) throw new Error('Failed');
+    const allRoutes = await resp.json();
+
+    // Filter to routes assigned to this driver (by route name matching user's routes)
+    const myRoutes = APP.currentUser.routes && APP.currentUser.routes.length
+      ? allRoutes.filter(r => APP.currentUser.routes.includes(r.routeName))
+      : allRoutes; // admin sees all
+
+    APP.routes = myRoutes;
+
+    if (!myRoutes.length) {
+      $('routeCards').innerHTML = '<div class="no-routes"><div class="icon">📍</div><div>No routes assigned yet.<br>Ask your scheduler to push routes.</div></div>';
+      return;
+    }
+
+    let html = '';
+    myRoutes.forEach((r, i) => {
+      const pct = r.stopCount ? Math.round(r.completedCount / r.stopCount * 100) : 0;
+      const isDone = pct === 100;
+      html += '<div class="route-card" onclick="startRoute(' + i + ')">' +
+        '<div class="route-card-left">' +
+        '<div class="route-card-name">📍 ' + escHtml(r.routeName) + '</div>' +
+        '<div class="route-card-day">' + escHtml(r.day) + '</div>' +
+        '<div class="route-card-meta">' + r.stopCount + ' stops' + (r.assignee ? ' · ' + escHtml(r.assignee) : '') + '</div>' +
+        '</div>' +
+        '<div class="route-card-badge' + (isDone ? ' done' : '') + '">' + (isDone ? '✓ Complete' : r.completedCount + '/' + r.stopCount) + '</div>' +
+        '</div>';
+    });
+    $('routeCards').innerHTML = html;
+  } catch (e) {
+    $('routeCards').innerHTML = '<div class="no-routes"><div class="icon">⚠️</div><div>Could not load routes.<br>' + escHtml(e.message) + '</div></div>';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ACTIVE ROUTE
+   ═══════════════════════════════════════════════════════════════ */
+async function startRoute(index) {
+  const summary = APP.routes[index];
+  try {
+    const resp = await fetch(dataUrl(APP.plantId + '/' + encodeURIComponent(summary.routeName) + '/' + encodeURIComponent(summary.day) + '.json'));
+    if (!resp.ok) throw new Error('Failed to load route');
+    APP.currentRoute = await resp.json();
+  } catch (e) {
+    toast('Could not load route: ' + e.message, 'error');
+    return;
+  }
+
+  // Restore any saved progress (driver can resume after closing app)
+  loadRouteProgress(APP.currentRoute);
+
+  // Optimize stop order
+  const plant = APP.currentRoute.plant || {};
+  APP.currentRoute.stops = optimizeStopOrder(APP.currentRoute.stops, plant.lat, plant.lng);
+
+  // Mark route as started
+  if (!APP.currentRoute.routeStartedAt) {
+    APP.currentRoute.routeStartedAt = new Date().toISOString();
+    patchRoute({ routeStartedAt: APP.currentRoute.routeStartedAt });
+  }
+
+  // Find first incomplete stop
+  APP.currentStopIndex = APP.currentRoute.stops.findIndex(s => !s.done);
+  if (APP.currentStopIndex < 0) APP.currentStopIndex = 0;
+
+  showActiveRoute();
+}
+
+function showActiveRoute() {
+  showScreen('activeScreen');
+  const r = APP.currentRoute;
+  const stops = r.stops || [];
+  const doneCount = stops.filter(s => s.done).length;
+
+  $('activeTitle').textContent = r.routeName + ' — ' + r.day;
+  $('activeProgress').textContent = doneCount + '/' + stops.length + ' stops complete';
+  $('progressFill').style.width = (stops.length ? Math.round(doneCount / stops.length * 100) : 0) + '%';
+
+  // Check if all done
+  if (doneCount === stops.length && stops.length > 0) {
+    showRouteComplete();
+    return;
+  }
+
+  // Render current stop card
+  const cs = stops[APP.currentStopIndex];
+  const addr = [cs.address, [cs.city, cs.state, cs.zip].filter(Boolean).join(', ')].filter(Boolean).join(', ');
+
+  let bodyHtml = '<div class="current-stop">' +
+    '<div class="current-stop-label">Next Stop</div>' +
+    '<div class="current-stop-name">#' + escHtml(String(cs.customerNumber || '')) + ' ' + escHtml(cs.customerName || '') + '</div>' +
+    '<div class="current-stop-addr">' + escHtml(addr) + '</div>' +
+    '<div class="current-stop-details">' +
+    (cs.typeOil ? '<span>🛢️ ' + escHtml(cs.typeOil) + '</span>' : '') +
+    (cs.serviceStart ? '<span>🕐 ' + escHtml(cs.serviceStart) + '</span>' : '') +
+    '</div>' +
+    '<div class="current-stop-actions">' +
+    '<button class="btn btn-gold" onclick="showTurnByTurn(' + APP.currentStopIndex + ')">🗺️ Navigate</button>' +
+    '<button class="btn btn-green" onclick="markStopDone(\'' + escHtml(String(cs.customerNumber)) + '\')">✓ Done</button>' +
+    '</div></div>';
+
+  // Render stop list
+  bodyHtml += '<div class="stop-list"><div class="stop-list-title">All Stops</div>';
+  stops.forEach((s, i) => {
+    const isCurrent = i === APP.currentStopIndex;
+    const cls = (s.done ? 'done' : '') + (isCurrent ? ' current' : '');
+    bodyHtml += '<div class="stop-item ' + cls + '" onclick="' + (s.done ? '' : 'APP.currentStopIndex=' + i + ';showActiveRoute()') + '">' +
+      '<div class="stop-num">' + (s.done ? '✓' : (i + 1)) + '</div>' +
+      '<div class="stop-info"><div class="stop-info-name">' + escHtml(s.customerName || '') + '</div>' +
+      '<div class="stop-info-addr">' + escHtml(s.city || '') + '</div></div>' +
+      '</div>';
+  });
+  bodyHtml += '</div>';
+
+  $('activeBody').innerHTML = bodyHtml;
+
+  // Init map if Google Maps is loaded
+  if (window.google && google.maps) {
+    initRouteMap(stops, (APP.currentRoute.plant || {}).lat, (APP.currentRoute.plant || {}).lng);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROUTE OPTIMIZATION
+   ═══════════════════════════════════════════════════════════════ */
+function optimizeStopOrder(stops, plantLat, plantLng) {
+  const fixed = stops.filter(s => s.serviceStart);
+  const flex = stops.filter(s => !s.serviceStart);
+
+  // Sort fixed stops by appointment time
+  fixed.sort((a, b) => parseTime(a.serviceStart) - parseTime(b.serviceStart));
+
+  // For flexible stops: clockwise loop starting from furthest
+  if (flex.length > 0 && plantLat && plantLng) {
+    flex.forEach(s => {
+      if (s.lat && s.lng) {
+        s._dist = haversine(plantLat, plantLng, s.lat, s.lng);
+        s._bearing = calcBearing(plantLat, plantLng, s.lat, s.lng);
+      } else {
+        s._dist = 0;
+        s._bearing = 0;
+      }
+    });
+    // Find furthest stop, sort clockwise from there
+    flex.sort((a, b) => b._dist - a._dist);
+    if (flex.length > 1) {
+      const startBearing = flex[0]._bearing;
+      flex.sort((a, b) => {
+        const ba = ((a._bearing - startBearing) + 360) % 360;
+        const bb = ((b._bearing - startBearing) + 360) % 360;
+        return ba - bb;
+      });
+    }
+  }
+
+  // Merge: fixed stops first (time-critical), then flex
+  return [...fixed, ...flex];
+}
+
+function parseTime(str) {
+  if (!str) return 0;
+  const m = String(str).match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
+  if (!m) return 0;
+  let h = parseInt(m[1]);
+  const min = parseInt(m[2] || '0');
+  const ampm = (m[3] || '').toLowerCase();
+  if (ampm === 'pm' && h < 12) h += 12;
+  if (ampm === 'am' && h === 12) h = 0;
+  return h * 60 + min;
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 3959;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function calcBearing(lat1, lng1, lat2, lng2) {
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const y = Math.sin(dLng) * Math.cos(lat2 * Math.PI / 180);
+  const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) - Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLng);
+  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GOOGLE MAPS
+   ═══════════════════════════════════════════════════════════════ */
+function initRouteMap(stops, plantLat, plantLng) {
+  const mapDiv = $('routeMap');
+  if (!mapDiv) return;
+
+  const center = plantLat && plantLng ? { lat: Number(plantLat), lng: Number(plantLng) } : { lat: 34.95, lng: -81.93 };
+  const map = new google.maps.Map(mapDiv, {
+    center, zoom: 10,
+    mapTypeControl: false, streetViewControl: false, fullscreenControl: true,
+    zoomControl: true,
+    styles: [
+      { elementType: 'geometry', stylers: [{ color: '#212121' }] },
+      { elementType: 'labels.text.fill', stylers: [{ color: '#757575' }] },
+      { elementType: 'labels.text.stroke', stylers: [{ color: '#212121' }] },
+      { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#383838' }] },
+      { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#8a8a8a' }] },
+      { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#000000' }] },
+    ],
+  });
+  APP.map = map;
+
+  // Clear old markers
+  APP.markers.forEach(m => m.setMap(null));
+  APP.markers = [];
+
+  // Add markers
+  const bounds = new google.maps.LatLngBounds();
+  stops.forEach((s, i) => {
+    if (!s.lat || !s.lng) return;
+    const pos = { lat: Number(s.lat), lng: Number(s.lng) };
+    bounds.extend(pos);
+    const marker = new google.maps.Marker({
+      position: pos, map,
+      label: { text: String(i + 1), color: '#000', fontWeight: '700', fontSize: '11px' },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE, scale: 14,
+        fillColor: s.done ? '#22c55e' : '#FFD100', fillOpacity: 1,
+        strokeColor: '#000', strokeWeight: 2,
+      },
+    });
+    APP.markers.push(marker);
+  });
+  if (stops.some(s => s.lat && s.lng)) map.fitBounds(bounds, 40);
+
+  // Request directions
+  requestFullRouteDirections(stops, plantLat, plantLng);
+}
+
+function requestFullRouteDirections(stops, plantLat, plantLng) {
+  const geoStops = stops.filter(s => s.lat && s.lng);
+  if (geoStops.length < 1 || !plantLat || !plantLng) return;
+
+  const origin = { lat: Number(plantLat), lng: Number(plantLng) };
+  const waypoints = geoStops.map(s => ({ location: { lat: Number(s.lat), lng: Number(s.lng) }, stopover: true }));
+
+  APP.directionsRenderer = new google.maps.DirectionsRenderer({
+    map: APP.map, suppressMarkers: true,
+    polylineOptions: { strokeColor: '#FFD100', strokeWeight: 4, strokeOpacity: 0.8 },
+  });
+
+  new google.maps.DirectionsService().route({
+    origin, destination: origin, waypoints, travelMode: 'DRIVING',
+  }, (result, status) => {
+    if (status === 'OK') {
+      APP.directionsRenderer.setDirections(result);
+      cacheDirectionsText(result);
+    }
+  });
+}
+
+function cacheDirectionsText(result) {
+  const legs = result.routes[0].legs;
+  APP.cachedDirections = legs.map((leg, i) => ({
+    stopIndex: i, distance: leg.distance.text, duration: leg.duration.text,
+    steps: leg.steps.map(s => ({ instruction: s.instructions, distance: s.distance.text, duration: s.duration.text })),
+  }));
+  try { localStorage.setItem('frymizer_cached_directions', JSON.stringify(APP.cachedDirections)); } catch (e) {}
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TURN-BY-TURN
+   ═══════════════════════════════════════════════════════════════ */
+function showTurnByTurn(stopIndex) {
+  showScreen('tbtScreen');
+  const stop = APP.currentRoute.stops[stopIndex];
+  const leg = APP.cachedDirections[stopIndex];
+
+  $('tbtName').textContent = stop.customerName || 'Stop ' + (stopIndex + 1);
+  $('tbtMeta').textContent = leg ? (leg.distance + ' · ' + leg.duration) : '';
+  $('tbtDoneBtn').setAttribute('onclick', "markStopDone('" + escHtml(String(stop.customerNumber)) + "')");
+
+  // Render steps
+  if (leg && leg.steps) {
+    let html = '';
+    leg.steps.forEach((s, i) => {
+      html += '<div class="tbt-step"><div class="tbt-step-icon">' + (i + 1) + '</div>' +
+        '<div class="tbt-step-text"><div class="tbt-step-instruction">' + s.instruction + '</div>' +
+        '<div class="tbt-step-dist">' + s.distance + '</div></div></div>';
+    });
+    $('tbtBody').innerHTML = html;
+  } else {
+    const addr = [stop.address, [stop.city, stop.state, stop.zip].filter(Boolean).join(', ')].filter(Boolean).join(', ');
+    $('tbtBody').innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-light)">' +
+      '<p style="margin-bottom:12px">Directions not available offline.</p>' +
+      '<p style="font-size:.95rem;font-weight:600">' + escHtml(addr) + '</p>' +
+      '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(addr) + '" target="_blank" ' +
+      'style="display:inline-block;margin-top:16px;padding:10px 20px;background:var(--gold);color:#000;border-radius:10px;font-weight:700;text-decoration:none">Open in Google Maps</a></div>';
+  }
+
+  // Show map for this leg if available
+  if (window.google && google.maps && stop.lat && stop.lng) {
+    const tbtMap = new google.maps.Map($('tbtMap'), {
+      center: { lat: Number(stop.lat), lng: Number(stop.lng) }, zoom: 14,
+      mapTypeControl: false, streetViewControl: false, fullscreenControl: false, zoomControl: true,
+    });
+    new google.maps.Marker({ position: { lat: Number(stop.lat), lng: Number(stop.lng) }, map: tbtMap,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 16, fillColor: '#FFD100', fillOpacity: 1, strokeColor: '#000', strokeWeight: 2 },
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MARK DONE
+   ═══════════════════════════════════════════════════════════════ */
+async function markStopDone(customerNumber) {
+  const stop = APP.currentRoute.stops.find(s => String(s.customerNumber) === String(customerNumber));
+  if (!stop || stop.done) return;
+  stop.done = true;
+  stop.doneAt = new Date().toISOString();
+
+  // Update marker
+  const idx = APP.currentRoute.stops.indexOf(stop);
+  if (APP.markers[idx]) {
+    APP.markers[idx].setIcon({
+      path: google.maps.SymbolPath.CIRCLE, scale: 14,
+      fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#000', strokeWeight: 2,
+    });
+  }
+
+  // Sync to API
+  await patchRoute({ stopId: customerNumber, done: true, doneAt: stop.doneAt });
+
+  toast('Stop completed!', 'success');
+  advanceToNextStop();
+}
+
+function advanceToNextStop() {
+  const stops = APP.currentRoute.stops;
+  const nextIdx = stops.findIndex(s => !s.done);
+  if (nextIdx < 0) {
+    showRouteComplete();
+    return;
+  }
+  APP.currentStopIndex = nextIdx;
+  showActiveRoute();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ROUTE COMPLETE
+   ═══════════════════════════════════════════════════════════════ */
+function showRouteComplete() {
+  showScreen('completeScreen');
+  const r = APP.currentRoute;
+  if (!r.routeCompletedAt) {
+    r.routeCompletedAt = new Date().toISOString();
+    patchRoute({ routeCompletedAt: r.routeCompletedAt });
+  }
+
+  const started = r.routeStartedAt ? new Date(r.routeStartedAt) : null;
+  const finished = new Date(r.routeCompletedAt);
+  const duration = started ? formatDuration(finished - started) : '—';
+
+  $('completeContent').innerHTML =
+    '<div class="complete-icon">🎉</div>' +
+    '<h2>Route Complete!</h2>' +
+    '<div class="complete-stat"><strong>' + r.stops.length + '/' + r.stops.length + '</strong> stops delivered</div>' +
+    '<div class="complete-stat">Started: <strong>' + (started ? started.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—') + '</strong></div>' +
+    '<div class="complete-stat">Finished: <strong>' + finished.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '</strong></div>' +
+    '<div class="complete-stat">Total time: <strong>' + duration + '</strong></div>' +
+    '<button class="btn btn-gold" onclick="backToRoutes()" style="margin-top:24px">Return to Routes</button>';
+}
+
+function formatDuration(ms) {
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return mins + ' min';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h + 'h ' + m + 'm';
+}
+
+function backToRoutes() {
+  APP.currentRoute = null;
+  APP.currentStopIndex = 0;
+  loadRouteList();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   API HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+function saveRouteProgress() {
+  if (!APP.currentRoute) return;
+  const r = APP.currentRoute;
+  const key = 'frymizer_progress_' + r.plantId + '_' + r.routeName + '_' + r.day;
+  const progress = {
+    routeStartedAt: r.routeStartedAt || null,
+    routeCompletedAt: r.routeCompletedAt || null,
+    stops: (r.stops || []).map(s => ({ customerNumber: s.customerNumber, done: !!s.done, doneAt: s.doneAt || null })),
+  };
+  localStorage.setItem(key, JSON.stringify(progress));
+}
+
+function loadRouteProgress(route) {
+  const key = 'frymizer_progress_' + route.plantId + '_' + route.routeName + '_' + route.day;
+  const saved = localStorage.getItem(key);
+  if (!saved) return;
+  const progress = JSON.parse(saved);
+  if (progress.routeStartedAt) route.routeStartedAt = progress.routeStartedAt;
+  if (progress.routeCompletedAt) route.routeCompletedAt = progress.routeCompletedAt;
+  (progress.stops || []).forEach(p => {
+    const stop = (route.stops || []).find(s => String(s.customerNumber) === String(p.customerNumber));
+    if (stop && p.done) { stop.done = true; stop.doneAt = p.doneAt; }
+  });
+}
+
+// Replaces patchRoute — just save locally
+async function patchRoute(updates) {
+  saveRouteProgress();
+}
+
+// Connectivity handling
+window.addEventListener('online', () => { $('offlineBadge').classList.remove('show'); });
+window.addEventListener('offline', () => { $('offlineBadge').classList.add('show'); });
+
+/* ═══════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // Load config or show setup
+  if (loadConfig()) {
+    loadLoginScreen();
+  } else {
+    showScreen('setupScreen');
+  }
+
+  // Listen for Enter on PIN field
+  $('loginPin').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
+});
+</script>
+
+<!-- Google Maps — loaded dynamically based on stored key -->
+<script>
+(function() {
+  const key = localStorage.getItem('frymizer_driver_maps_key');
+  if (key) {
+    const s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&libraries=geometry';
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>
