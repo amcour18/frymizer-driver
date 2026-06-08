@@ -392,15 +392,16 @@ async function loadRouteList() {
 
     let html = '';
     myRoutes.forEach((r, i) => {
-      const pct = r.stopCount ? Math.round(r.completedCount / r.stopCount * 100) : 0;
-      const isDone = pct === 100;
+      const completed = r.completedCount || 0;
+      const pct = r.stopCount ? Math.round(completed / r.stopCount * 100) : 0;
+      const isDone = pct === 100 && r.stopCount > 0;
       html += '<div class="route-card" onclick="startRoute(' + i + ')">' +
         '<div class="route-card-left">' +
         '<div class="route-card-name">📍 ' + escHtml(r.routeName) + '</div>' +
         '<div class="route-card-day">' + escHtml(r.day) + '</div>' +
         '<div class="route-card-meta">' + r.stopCount + ' stops' + (r.assignee ? ' · ' + escHtml(r.assignee) : '') + '</div>' +
         '</div>' +
-        '<div class="route-card-badge' + (isDone ? ' done' : '') + '">' + (isDone ? '✓ Complete' : r.completedCount + '/' + r.stopCount) + '</div>' +
+        '<div class="route-card-badge' + (isDone ? ' done' : '') + '">' + (isDone ? '✓ Complete' : r.stopCount + ' stops') + '</div>' +
         '</div>';
     });
     $('routeCards').innerHTML = html;
