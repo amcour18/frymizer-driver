@@ -1,4 +1,4 @@
-const CACHE = 'frymizer-driver-v2';
+const CACHE = 'frymizer-driver-v3';
 const PRECACHE = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {

@@ -421,20 +421,20 @@ async function startRoute(index) {
     return;
   }
 
-  // Restore any saved progress (driver can resume after closing app)
   loadRouteProgress(APP.currentRoute);
 
-  // Optimize stop order
   const plant = APP.currentRoute.plant || {};
-  APP.currentRoute.stops = optimizeStopOrder(APP.currentRoute.stops, plant.lat, plant.lng);
+  const originLat = plant.lat || (APP.currentUser && APP.currentUser.lat) || null;
+  const originLng = plant.lng || (APP.currentUser && APP.currentUser.lng) || null;
+  APP.routeOrigin = originLat && originLng ? { lat: Number(originLat), lng: Number(originLng) } : null;
 
-  // Mark route as started
+  APP.currentRoute.stops = await optimizeRoute(APP.currentRoute.stops, originLat, originLng);
+
   if (!APP.currentRoute.routeStartedAt) {
     APP.currentRoute.routeStartedAt = new Date().toISOString();
     patchRoute({ routeStartedAt: APP.currentRoute.routeStartedAt });
   }
 
-  // Find first incomplete stop
   APP.currentStopIndex = APP.currentRoute.stops.findIndex(s => !s.done);
   if (APP.currentStopIndex < 0) APP.currentStopIndex = 0;
 
@@ -489,15 +489,46 @@ function showActiveRoute() {
 
   $('activeBody').innerHTML = bodyHtml;
 
-  // Init map if Google Maps is loaded
   if (window.google && google.maps) {
-    initRouteMap(stops, (APP.currentRoute.plant || {}).lat, (APP.currentRoute.plant || {}).lng);
+    const o = APP.routeOrigin || {};
+    initRouteMap(stops, o.lat, o.lng);
   }
 }
 
 /* ═══════════════════════════════════════════════════════════════
    ROUTE OPTIMIZATION
    ═══════════════════════════════════════════════════════════════ */
+async function optimizeRoute(stops, originLat, originLng) {
+  if (window.google && google.maps && originLat && originLng) {
+    const geoStops = stops.filter(s => s.lat && s.lng);
+    const noGeo = stops.filter(s => !s.lat || !s.lng);
+    if (geoStops.length >= 2 && geoStops.length <= 25) {
+      try {
+        const origin = { lat: Number(originLat), lng: Number(originLng) };
+        const waypoints = geoStops.map(s => ({
+          location: { lat: Number(s.lat), lng: Number(s.lng) }, stopover: true
+        }));
+        const result = await new Promise((resolve, reject) => {
+          new google.maps.DirectionsService().route({
+            origin, destination: origin, waypoints,
+            optimizeWaypoints: true, travelMode: 'DRIVING',
+          }, (res, status) => {
+            if (status === 'OK') resolve(res); else reject(new Error(status));
+          });
+        });
+        const order = result.routes[0].waypoint_order;
+        if (order && order.length === geoStops.length) {
+          APP._optimizedDirections = result;
+          const reordered = order.map(i => geoStops[i]);
+          toast('Route optimized by Google Maps', 'success');
+          return [...reordered, ...noGeo];
+        }
+      } catch (e) { /* fall through to geometric */ }
+    }
+  }
+  return optimizeStopOrder(stops, originLat, originLng);
+}
+
 function optimizeStopOrder(stops, plantLat, plantLng) {
   const fixed = stops.filter(s => s.serviceStart);
   const flex = stops.filter(s => !s.serviceStart);
@@ -613,13 +644,20 @@ function requestFullRouteDirections(stops, plantLat, plantLng) {
   const geoStops = stops.filter(s => s.lat && s.lng);
   if (geoStops.length < 1 || !plantLat || !plantLng) return;
 
-  const origin = { lat: Number(plantLat), lng: Number(plantLng) };
-  const waypoints = geoStops.map(s => ({ location: { lat: Number(s.lat), lng: Number(s.lng) }, stopover: true }));
-
   APP.directionsRenderer = new google.maps.DirectionsRenderer({
     map: APP.map, suppressMarkers: true,
     polylineOptions: { strokeColor: '#FFD100', strokeWeight: 4, strokeOpacity: 0.8 },
   });
+
+  if (APP._optimizedDirections) {
+    APP.directionsRenderer.setDirections(APP._optimizedDirections);
+    cacheDirectionsText(APP._optimizedDirections);
+    APP._optimizedDirections = null;
+    return;
+  }
+
+  const origin = { lat: Number(plantLat), lng: Number(plantLng) };
+  const waypoints = geoStops.map(s => ({ location: { lat: Number(s.lat), lng: Number(s.lng) }, stopover: true }));
 
   new google.maps.DirectionsService().route({
     origin, destination: origin, waypoints, travelMode: 'DRIVING',
