@@ -470,7 +470,7 @@ function showActiveRoute() {
     (cs.serviceStart ? '<span>🕐 ' + escHtml(cs.serviceStart) + '</span>' : '') +
     '</div>' +
     '<div class="current-stop-actions">' +
-    '<button class="btn btn-gold" onclick="showTurnByTurn(' + APP.currentStopIndex + ')">🗺️ Navigate</button>' +
+    '<button class="btn btn-gold" onclick="navigateToStop(' + APP.currentStopIndex + ')">🗺️ Navigate</button>' +
     '<button class="btn btn-green" onclick="markStopDone(\'' + escHtml(String(cs.customerNumber)) + '\')">✓ Done</button>' +
     '</div></div>';
 
@@ -679,8 +679,16 @@ function cacheDirectionsText(result) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TURN-BY-TURN
+   NAVIGATION
    ═══════════════════════════════════════════════════════════════ */
+function navigateToStop(stopIndex) {
+  const stop = APP.currentRoute.stops[stopIndex];
+  const dest = (stop.lat && stop.lng)
+    ? stop.lat + ',' + stop.lng
+    : encodeURIComponent([stop.address, stop.city, stop.state, stop.zip].filter(Boolean).join(', '));
+  window.open('https://www.google.com/maps/dir/?api=1&destination=' + dest + '&travelmode=driving', '_blank');
+}
+
 function showTurnByTurn(stopIndex) {
   showScreen('tbtScreen');
   const stop = APP.currentRoute.stops[stopIndex];
