@@ -27,15 +27,6 @@ input, select { font-family: inherit; }
 .screen { position: fixed; inset: 0; display: none; flex-direction: column; overflow: hidden; }
 .screen.active { display: flex; }
 
-/* ── SETUP SCREEN ── */
-.setup-screen { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 40%, #111 100%); align-items: center; justify-content: center; padding: 20px; }
-.setup-card { background: var(--white); border-radius: 20px; padding: 40px 32px; width: 100%; max-width: 400px; box-shadow: 0 25px 80px rgba(0,0,0,.3); text-align: center; }
-.setup-card h1 { font-size: 1.3rem; margin-bottom: 4px; }
-.setup-card p { font-size: .85rem; color: var(--text-light); margin-bottom: 20px; }
-.setup-card input { width: 100%; padding: 12px 16px; border: 2px solid rgba(0,0,0,.08); border-radius: 10px; font-size: .95rem; margin-bottom: 12px; }
-.setup-card input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(255,209,0,.25); }
-.setup-card .btn { width: 100%; }
-
 /* ── LOGIN SCREEN ── */
 .login-screen { background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 40%, #111 100%); align-items: center; justify-content: center; padding: 20px; position: relative; }
 .login-screen::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 600px 400px at 30% 20%, rgba(255,209,0,.08) 0%, transparent 70%); pointer-events: none; }
@@ -161,20 +152,8 @@ input, select { font-family: inherit; }
 <!-- OFFLINE BADGE -->
 <div class="offline-badge" id="offlineBadge">Offline — changes will sync when back online</div>
 
-<!-- SCREEN 0: SETUP (first-time config) -->
-<div class="screen setup-screen active" id="setupScreen">
-  <div class="setup-card">
-    <div style="font-size:2.5rem;margin-bottom:12px">🔥</div>
-    <h1>Fry Mizer Driver</h1>
-    <p>First-time setup — enter your plant info</p>
-    <input type="text" id="setupPlantId" placeholder="Plant ID (e.g. 15)">
-    <input type="text" id="setupMapsKey" placeholder="Google Maps API Key (optional)">
-    <button class="btn btn-gold btn-block" onclick="saveSetup()">Continue</button>
-  </div>
-</div>
-
 <!-- SCREEN 1: LOGIN -->
-<div class="screen login-screen" id="loginScreen">
+<div class="screen login-screen active" id="loginScreen">
   <div class="login-card">
     <div class="login-logo">🔥</div>
     <h1>Fry Mizer Driver</h1>
@@ -352,7 +331,7 @@ function login() {
   APP.plantId = user.plantId || '';
   $('loginError').textContent = '';
   $('loginPin').value = '';
-  loadRouteList();
+  loadAndStartRoute();
 }
 
 function logoutDriver() {
@@ -365,6 +344,25 @@ function logoutDriver() {
 /* ═══════════════════════════════════════════════════════════════
    ROUTE LIST
    ═══════════════════════════════════════════════════════════════ */
+async function loadAndStartRoute() {
+  try {
+    const resp = await fetch(dataUrl(APP.plantId + '/routes.json'));
+    if (!resp.ok) throw new Error('No routes');
+    const allRoutes = await resp.json();
+    const myRoutes = APP.currentUser.routes && APP.currentUser.routes.length
+      ? allRoutes.filter(r => APP.currentUser.routes.some(ur => r.routeName.toLowerCase().includes(ur.toLowerCase())))
+      : allRoutes;
+    APP.routes = myRoutes;
+    if (myRoutes.length > 0) {
+      startRoute(0);
+    } else {
+      loadRouteList();
+    }
+  } catch (e) {
+    loadRouteList();
+  }
+}
+
 async function loadRouteList() {
   showScreen('routesScreen');
   const hour = new Date().getHours();
@@ -378,10 +376,9 @@ async function loadRouteList() {
     if (!resp.ok) throw new Error('Failed');
     const allRoutes = await resp.json();
 
-    // Filter to routes assigned to this driver (by route name matching user's routes)
     const myRoutes = APP.currentUser.routes && APP.currentUser.routes.length
-      ? allRoutes.filter(r => APP.currentUser.routes.includes(r.routeName))
-      : allRoutes; // admin sees all
+      ? allRoutes.filter(r => APP.currentUser.routes.some(ur => r.routeName.toLowerCase().includes(ur.toLowerCase())))
+      : allRoutes;
 
     APP.routes = myRoutes;
 
@@ -694,9 +691,8 @@ async function markStopDone(customerNumber) {
   stop.done = true;
   stop.doneAt = new Date().toISOString();
 
-  // Update marker
   const idx = APP.currentRoute.stops.indexOf(stop);
-  if (APP.markers[idx]) {
+  if (window.google && APP.markers[idx]) {
     APP.markers[idx].setIcon({
       path: google.maps.SymbolPath.CIRCLE, scale: 14,
       fillColor: '#22c55e', fillOpacity: 1, strokeColor: '#000', strokeWeight: 2,
