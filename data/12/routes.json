@@ -4,5 +4,11 @@
     "day": "Wednesday",
     "assignee": "Truck25",
     "stopCount": 9
+  },
+  {
+    "routeName": "Charlotte, Monroe, Greenville",
+    "day": "Thursday",
+    "assignee": "Truck25",
+    "stopCount": 6
   }
 ]
