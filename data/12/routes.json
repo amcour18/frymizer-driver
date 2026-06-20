@@ -10,5 +10,11 @@
     "day": "Thursday",
     "assignee": "Truck25",
     "stopCount": 6
+  },
+  {
+    "routeName": "Monday",
+    "day": "Monday",
+    "assignee": "Truck27",
+    "stopCount": 9
   }
 ]
