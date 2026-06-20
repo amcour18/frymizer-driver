@@ -6,7 +6,9 @@
       "name": "KEY ENERGY, LLC",
       "address": "2110 Governors Rd.",
       "cityStateZip": "Windsor, North Carolina 27983",
-      "phone": "833-379-9473"
+      "phone": "833-379-9473",
+      "lat": 35.998,
+      "lng": -76.947
     }
   ],
   "users": [
@@ -93,10 +95,16 @@
         "Charlotte",
         "Rhodhiss",
         "Greer",
-        "Charlotte, Monroe, Gastonia",
+        "Charlotte",
+        "Monroe",
+        "Gastonia",
         "Asheville",
-        "Charlotte, Monroe, Greenville",
-        "Charlotte, Rhodhiss, Greer",
+        "Charlotte",
+        "Monroe",
+        "Greenville",
+        "Charlotte",
+        "Rhodhiss",
+        "Greer",
         "Peanut"
       ],
       "address": "2720 Fairforest Clevedale Rd., Spartanburg, SC 29301",
@@ -131,9 +139,12 @@
       "role": "manager",
       "plantId": "12",
       "routes": [
-        "Peanut"
+        "Peanut",
+        "Monday",
+        "Thursday",
+        "Tuesday"
       ],
-      "address": "2720 Fairforest Clevedale Rd., Spartanburg, SC 29301",
+      "address": "2110 Governors Rd., Windsor, NC 27983",
       "lat": 34.95163,
       "lng": -82.0214684
     }
