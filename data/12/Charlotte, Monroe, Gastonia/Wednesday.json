@@ -8,7 +8,9 @@
     "name": "KEY ENERGY, LLC",
     "address": "2110 Governors Rd.",
     "cityStateZip": "Windsor, North Carolina 27983",
-    "phone": "833-379-9473"
+    "phone": "833-379-9473",
+    "lat": 35.998,
+    "lng": -76.947
   },
   "stops": [
     {
