@@ -94,18 +94,7 @@
         "Chesnee",
         "Charlotte",
         "Rhodhiss",
-        "Greer",
-        "Charlotte",
-        "Monroe",
-        "Gastonia",
-        "Asheville",
-        "Charlotte",
-        "Monroe",
-        "Greenville",
-        "Charlotte",
-        "Rhodhiss",
-        "Greer",
-        "Peanut"
+        "Greer"
       ],
       "address": "2720 Fairforest Clevedale Rd., Spartanburg, SC 29301",
       "lat": 34.95163,
@@ -139,12 +128,9 @@
       "role": "manager",
       "plantId": "12",
       "routes": [
-        "Peanut",
-        "Monday",
-        "Thursday",
-        "Tuesday"
+        "Peanut"
       ],
-      "address": "2110 Governors Rd., Windsor, NC 27983",
+      "address": "2720 Fairforest Clevedale Rd., Spartanburg, SC 29301",
       "lat": 34.95163,
       "lng": -82.0214684
     }
